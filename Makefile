@@ -15,4 +15,5 @@ test_functional:
 	@cd functional_tests && docker-compose down
 	@echo ""
 
-# go get ./... && cd functional_tests && go test -v --godog.format=pretty --godog.random
+build_snapshot:
+	goreleaser --snapshot --rm-dist

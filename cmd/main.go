@@ -29,6 +29,7 @@ func main() {
 		fmt.Println("Configuration values are set using environment variables, for info please see the following list")
 		fmt.Println("")
 		fmt.Println(env.Help())
+		os.Exit(0)
 	}
 
 	err := env.Parse()
