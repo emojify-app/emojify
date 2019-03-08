@@ -17,6 +17,9 @@ import (
 var mockQueue *queue.MockQueue
 var mockCache *cache.ClientMock
 
+var url = "http://abcde.com"
+var base64URL = "aHR0cDovL2FiY2RlLmNvbQ=="
+
 func setup(t *testing.T, pos, ql int) *Emojify {
 	mockQueue = &queue.MockQueue{}
 	mockQueue.On("Push", mock.Anything).Return(nil)
@@ -30,7 +33,7 @@ func setup(t *testing.T, pos, ql int) *Emojify {
 
 func TestCreateAddsItemToTheQueueIfNotPresent(t *testing.T) {
 	e := setup(t, 0, 0)
-	id := &wrappers.StringValue{Value: "abc"}
+	id := &wrappers.StringValue{Value: url}
 
 	i, err := e.Create(context.Background(), id)
 	if err != nil {
@@ -39,15 +42,15 @@ func TestCreateAddsItemToTheQueueIfNotPresent(t *testing.T) {
 
 	mockQueue.AssertCalled(t, "Position", mock.Anything)
 	mockQueue.AssertCalled(t, "Push", mock.Anything)
-	assert.Equal(t, id.GetValue(), i.Id)
+	assert.Equal(t, base64URL, i.Id)
 	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_QUEUED}, i.GetStatus())
 }
 
 func TestCreateReturnsErrorWhenCacheError(t *testing.T) {
 	e := setup(t, 0, 0)
-	id := &wrappers.StringValue{Value: "abc"}
+	id := &wrappers.StringValue{Value: url}
 	mockCache.ExpectedCalls = make([]*mock.Call, 0)
-	mockCache.On("Exists", mock.Anything, id, mock.Anything).Return(nil, grpc.Errorf(codes.Internal, "boom"))
+	mockCache.On("Exists", mock.Anything, &wrappers.StringValue{Value: base64URL}, mock.Anything).Return(nil, grpc.Errorf(codes.Internal, "boom"))
 
 	_, err := e.Create(context.Background(), id)
 
@@ -57,9 +60,9 @@ func TestCreateReturnsErrorWhenCacheError(t *testing.T) {
 
 func TestCreateDoesNotAddItemToTheQueueIfInCache(t *testing.T) {
 	e := setup(t, 0, 0)
-	id := &wrappers.StringValue{Value: "abc"}
+	id := &wrappers.StringValue{Value: url}
 	mockCache.ExpectedCalls = make([]*mock.Call, 0)
-	mockCache.On("Exists", mock.Anything, id, mock.Anything).Return(&wrappers.BoolValue{Value: true}, nil)
+	mockCache.On("Exists", mock.Anything, &wrappers.StringValue{Value: base64URL}, mock.Anything).Return(&wrappers.BoolValue{Value: true}, nil)
 
 	i, err := e.Create(context.Background(), id)
 	if err != nil {
@@ -68,13 +71,13 @@ func TestCreateDoesNotAddItemToTheQueueIfInCache(t *testing.T) {
 
 	mockQueue.AssertNotCalled(t, "Position", mock.Anything)
 	mockQueue.AssertNotCalled(t, "Push", mock.Anything)
-	assert.Equal(t, id.GetValue(), i.Id)
+	assert.Equal(t, base64URL, i.Id)
 	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_FINISHED}, i.GetStatus())
 }
 
 func TestCreateDoesNotAddItemToTheQueueIfPresent(t *testing.T) {
 	e := setup(t, 1, 2)
-	id := &wrappers.StringValue{Value: "abc"}
+	id := &wrappers.StringValue{Value: url}
 
 	i, err := e.Create(context.Background(), id)
 	if err != nil {
@@ -83,7 +86,7 @@ func TestCreateDoesNotAddItemToTheQueueIfPresent(t *testing.T) {
 
 	mockQueue.AssertCalled(t, "Position", mock.Anything)
 	mockQueue.AssertNotCalled(t, "Push", mock.Anything)
-	assert.Equal(t, id.GetValue(), i.Id)
+	assert.Equal(t, base64URL, i.Id)
 	assert.Equal(t, int32(1), i.QueuePosition)
 	assert.Equal(t, int32(2), i.QueueLength)
 	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_QUEUED}, i.GetStatus())
@@ -91,7 +94,7 @@ func TestCreateDoesNotAddItemToTheQueueIfPresent(t *testing.T) {
 
 func TestQueryReturnsItemIfOnQueue(t *testing.T) {
 	e := setup(t, 4, 4)
-	id := &wrappers.StringValue{Value: "abc"}
+	id := &wrappers.StringValue{Value: base64URL}
 
 	i, err := e.Query(context.Background(), id)
 	if err != nil {
@@ -106,7 +109,7 @@ func TestQueryReturnsItemIfOnQueue(t *testing.T) {
 
 func TestQueryReturnsItemIfInCache(t *testing.T) {
 	e := setup(t, 0, 0)
-	id := &wrappers.StringValue{Value: "abc"}
+	id := &wrappers.StringValue{Value: base64URL}
 	mockCache.ExpectedCalls = make([]*mock.Call, 0)
 	mockCache.On("Exists", mock.Anything, id, mock.Anything).Return(&wrappers.BoolValue{Value: true}, nil)
 
@@ -121,7 +124,7 @@ func TestQueryReturnsItemIfInCache(t *testing.T) {
 
 func TestQueryReturnsErrorIfQueueError(t *testing.T) {
 	e := setup(t, 4, 4)
-	id := &wrappers.StringValue{Value: "abc"}
+	id := &wrappers.StringValue{Value: base64URL}
 	mockQueue.ExpectedCalls = make([]*mock.Call, 0)
 	mockQueue.On("Position", mock.Anything).Return(0, 0, grpc.Errorf(codes.Internal, "boom"))
 

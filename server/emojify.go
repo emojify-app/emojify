@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"time"
 
 	"github.com/emojify-app/cache/protos/cache"
@@ -29,7 +30,8 @@ func (e *Emojify) Check(context.Context, *emojify.HealthCheckRequest) (*emojify.
 }
 
 // Create an Emojify request to process an image
-func (e *Emojify) Create(ctx context.Context, id *wrappers.StringValue) (*emojify.QueryItem, error) {
+func (e *Emojify) Create(ctx context.Context, uri *wrappers.StringValue) (*emojify.QueryItem, error) {
+	id := base64.URLEncoding.EncodeToString([]byte(uri.GetValue()))
 
 	// check the current queue and cache before adding
 	ei, err := e.checkQueueAndCache(id)
@@ -39,13 +41,13 @@ func (e *Emojify) Create(ctx context.Context, id *wrappers.StringValue) (*emojif
 
 	// create a new query item
 	ei = &emojify.QueryItem{
-		Id:     id.GetValue(),
+		Id:     id,
 		Status: &emojify.QueryStatus{Status: emojify.QueryStatus_QUEUED},
 	}
 
 	// create a new queueItem
 	qi := &queue.Item{
-		ID:    id.GetValue(),
+		ID:    id,
 		Added: time.Now(),
 	}
 
@@ -60,7 +62,7 @@ func (e *Emojify) Create(ctx context.Context, id *wrappers.StringValue) (*emojif
 // Query the status of an Emojify request
 func (e *Emojify) Query(ctx context.Context, id *wrappers.StringValue) (*emojify.QueryItem, error) {
 
-	ei, err := e.checkQueueAndCache(id)
+	ei, err := e.checkQueueAndCache(id.GetValue())
 	if ei != nil || err != nil {
 		return ei, err
 	}
@@ -68,11 +70,11 @@ func (e *Emojify) Query(ctx context.Context, id *wrappers.StringValue) (*emojify
 	return nil, grpc.Errorf(codes.NotFound, "Item not found: %s", id.GetValue())
 }
 
-func (e *Emojify) checkQueueAndCache(id *wrappers.StringValue) (*emojify.QueryItem, error) {
-	ei := &emojify.QueryItem{Id: id.GetValue()}
+func (e *Emojify) checkQueueAndCache(id string) (*emojify.QueryItem, error) {
+	ei := &emojify.QueryItem{Id: id}
 
 	// check the item is not all ready cached
-	ok, err := e.cache.Exists(context.Background(), id)
+	ok, err := e.cache.Exists(context.Background(), &wrappers.StringValue{Value: id})
 	if err != nil {
 		return nil, grpc.Errorf(codes.Internal, "cache error: %s", err)
 	}
@@ -83,7 +85,7 @@ func (e *Emojify) checkQueueAndCache(id *wrappers.StringValue) (*emojify.QueryIt
 	}
 
 	// check the item is not already on the queue
-	pos, l, err := e.workerQueue.Position(id.GetValue())
+	pos, l, err := e.workerQueue.Position(id)
 	if err != nil {
 		return nil, grpc.Errorf(codes.Internal, "error getting position: %s", err)
 	}
