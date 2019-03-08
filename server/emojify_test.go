@@ -88,3 +88,45 @@ func TestCreateDoesNotAddItemToTheQueueIfPresent(t *testing.T) {
 	assert.Equal(t, int32(2), i.QueueLength)
 	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_QUEUED}, i.GetStatus())
 }
+
+func TestQueryReturnsItemIfOnQueue(t *testing.T) {
+	e := setup(t, 4, 4)
+	id := &wrappers.StringValue{Value: "abc"}
+
+	i, err := e.Query(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, id.GetValue(), i.Id)
+	assert.Equal(t, int32(4), i.QueuePosition)
+	assert.Equal(t, int32(4), i.QueueLength)
+	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_QUEUED}, i.GetStatus())
+}
+
+func TestQueryReturnsItemIfInCache(t *testing.T) {
+	e := setup(t, 0, 0)
+	id := &wrappers.StringValue{Value: "abc"}
+	mockCache.ExpectedCalls = make([]*mock.Call, 0)
+	mockCache.On("Exists", mock.Anything, id, mock.Anything).Return(&wrappers.BoolValue{Value: true}, nil)
+
+	i, err := e.Query(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, id.GetValue(), i.GetId())
+	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_FINISHED}, i.GetStatus())
+}
+
+func TestQueryReturnsErrorIfQueueError(t *testing.T) {
+	e := setup(t, 4, 4)
+	id := &wrappers.StringValue{Value: "abc"}
+	mockQueue.ExpectedCalls = make([]*mock.Call, 0)
+	mockQueue.On("Position", mock.Anything).Return(0, 0, grpc.Errorf(codes.Internal, "boom"))
+
+	_, err := e.Query(context.Background(), id)
+
+	assert.Error(t, err)
+	assert.Equal(t, codes.Internal, grpc.Code(err))
+}
