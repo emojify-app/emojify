@@ -1,0 +1,48 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12
+    environment:
+      GO111MODULE: "on"
+    working_directory: /go/src/github.com/emojify-app/emojify
+    steps:
+      - checkout
+      - run: 
+          name: build application
+          command: GO_ENABLED=0 GOOS=linux go build -o emojify-server
+      - run: 
+          name: test application
+          command: go test -v --race ./...
+  release:
+    docker:
+      - image: circleci/golang:1.12
+    environment:
+      GO111MODULE: "on"
+    working_directory: /go/src/github.com/emojify-app/emojify
+    steps:
+      - setup_remote_docker
+      - checkout
+      - run: 
+         name: docker login
+         command: docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
+      - run: 
+          name: deploy application
+          command: curl -sL https://git.io/goreleaser | bash
+
+workflows:
+  version: 2
+  build-and-release:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - release:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/

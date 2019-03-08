@@ -1,13 +1,14 @@
----
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+    # you may remove this if you don't use vgo
+    - go mod download
+    # you may remove this if you don't need go generate
+    - go generate ./...
 builds:
-  -
-    env:
-      - CGO_ENABLED=0
-    binary: emojify
-    ldflags:
-      - -s -w -X main.version={{.Version}}
-    main: ./cmd/main.go
-
+- env:
+  - CGO_ENABLED=0
 archive:
   replacements:
     darwin: Darwin
@@ -15,22 +16,13 @@ archive:
     windows: Windows
     386: i386
     amd64: x86_64
-
+checksum:
+  name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}"
-
-dockers:
-  -
-    goos: linux
-    dockerfile: Dockerfile
-    binary: emojify
-    image_templates:
-      - "nicholasjackson/emojify-emojify:latest"
-      - "nicholasjackson/emojify-emojify:{{.Version}}"
-
+  name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+    - '^docs:'
+    - '^test:'
