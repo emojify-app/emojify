@@ -8,6 +8,7 @@ require (
 	github.com/emojify-app/cache v0.4.3
 	github.com/golang/protobuf v1.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
+	github.com/gophercloud/gophercloud v0.0.0-20190307220656-fe1ba5ce12dd
 	github.com/hashicorp/go-hclog v0.8.0
 	github.com/machinebox/sdk-go v0.3.0
 	github.com/matryer/is v1.2.0 // indirect

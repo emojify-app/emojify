@@ -16,8 +16,10 @@ func (q *MockQueue) Push(i *Item) error {
 }
 
 // Pop the last item off the queue
-func (q *MockQueue) Pop() (*Item, error) {
-	return nil, nil
+func (q *MockQueue) Pop() chan PopResponse {
+	args := q.Called()
+
+	return args.Get(0).(chan PopResponse)
 }
 
 // Position allows you to query the position of an item in the queue

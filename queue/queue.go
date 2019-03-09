@@ -18,12 +18,18 @@ type Item struct {
 	Error error
 }
 
+// PopResponse is the response from a queue pop operation, typically returned in a channel
+type PopResponse struct {
+	Item  *Item
+	Error error
+}
+
 // Queue defines the interface methods for a FIFO queue
 type Queue interface {
 	// Push an item onto the queue
 	Push(*Item) error
-	// Pop the last item off the queue
-	Pop() (*Item, error)
+	// Pop the last item off the queue, blocks if there is no items on the queue
+	Pop() chan PopResponse
 	// Position allows you to query the position of an item in the queue
 	Position(key string) (position, length int, err error)
 }
