@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/emojify-app/cache/protos/cache"
+	"github.com/emojify-app/emojify/logging"
 	"github.com/emojify-app/emojify/protos/emojify"
 	"github.com/emojify-app/emojify/queue"
 	"github.com/golang/protobuf/ptypes/wrappers"
@@ -28,7 +29,9 @@ func setup(t *testing.T, pos, ql int) *Emojify {
 	mockCache = &cache.ClientMock{}
 	mockCache.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(&wrappers.BoolValue{Value: false}, nil)
 
-	return New(mockQueue, mockCache)
+	logger := logging.New("localhost:9125")
+
+	return New(mockQueue, mockCache, logger)
 }
 
 func TestCreateAddsItemToTheQueueIfNotPresent(t *testing.T) {
