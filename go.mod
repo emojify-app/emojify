@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.26.0
 	github.com/DataDog/datadog-go v0.0.0-20180822151419-281ae9f2d895
 	github.com/emojify-app/cache v0.4.3
+	github.com/go-redis/redis v6.15.1+incompatible
 	github.com/golang/protobuf v1.3.0
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190307220656-fe1ba5ce12dd

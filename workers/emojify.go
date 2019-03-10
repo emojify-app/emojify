@@ -32,45 +32,50 @@ func (e *Emojify) Start() {
 	for qi := range e.queue.Pop() {
 		done := e.logger.WorkerProcessQueueItem(qi.Item)
 
+		if qi.Error != nil {
+			done(http.StatusInternalServerError, qi.Error)
+			break
+		}
+
 		// check the cache
 		ok, err := e.checkCache(qi.Item.ID)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			return
+			break
 		}
 
 		// if we have a cached item do not re-process
 		if ok {
 			done(http.StatusOK, nil)
-			return
+			break
 		}
 
 		// fetch the image
 		f, img, err := e.fetchImage(qi.Item.URI)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			return
+			break
 		}
 
 		// find faces in the image
 		faces, err := e.findFaces(qi.Item.URI, f)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			return
+			break
 		}
 
 		// process the image and replace faces with emoji
 		data, err := e.processImage(qi.Item.URI, faces, img)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			return
+			break
 		}
 
 		// save the cache
 		err = e.saveCache(qi.Item.URI, qi.Item.ID, data)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			return
+			break
 		}
 
 		done(http.StatusOK, nil)
