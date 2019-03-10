@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
+	"github.com/emojify-app/emojify/queue"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -19,11 +20,22 @@ type Logger interface {
 	// gRPC Endpoint logging
 	Create(string) Finished
 	Query(string) Finished
+
+	// Cache Operations
 	CacheExists(string) Finished
+	CachePut(string) Finished
 
 	// Queue Operations
 	QueueGet(string) Finished
 	QueuePut(string) Finished
+
+	// Emojify Worker
+	WorkerProcessQueueItem(*queue.Item) Finished
+	WorkerFetchImage(uri string) Finished
+	WorkerInvalidImage(uri string, err error)
+	WorkerFindFaces(uri string) Finished
+	WorkerEmojify(uri string) Finished
+	WorkerImageEncodeError(uri string, err error)
 }
 
 // Finished defines a function to be returned by logging methods which contain timers
@@ -109,6 +121,21 @@ func (i *Impl) CacheExists(key string) Finished {
 	}
 }
 
+// CachePut logs information when an image is pushed to the cache
+func (i *Impl) CachePut(key string) Finished {
+	st := time.Now()
+	i.l.Debug("Cache image", "key", key)
+
+	return func(status int, err error) {
+		i.s.Timing(statsPrefix+"cache.put", time.Now().Sub(st), getStatusTags(status), 1)
+		i.l.Debug("Cache image finished", "key", key, "status", status)
+
+		if err != nil {
+			i.l.Error("Unable to save image to cache", "key", key, "error", err)
+		}
+	}
+}
+
 // QueueGet logs timing information related to querying the status of an item on the queue
 func (i *Impl) QueueGet(key string) Finished {
 	st := time.Now()
@@ -141,6 +168,78 @@ func (i *Impl) QueuePut(key string) Finished {
 
 		i.l.Debug("Queue put finished", "key", key, "status", status)
 	}
+}
+
+// WorkerProcessQueueItem logs information about the processing of a queue item
+func (i *Impl) WorkerProcessQueueItem(item *queue.Item) Finished {
+	st := time.Now()
+	i.l.Debug("Processing queue item", "item", item)
+
+	return func(status int, err error) {
+		i.s.Timing(statsPrefix+"worker.process", time.Now().Sub(st), getStatusTags(status), 1)
+		i.l.Debug("Processing queue item finished", "item", item, "status", status)
+
+		if err != nil {
+			i.l.Error("Error processing queue item", "status", status, "item", item, "error", err)
+		}
+	}
+}
+
+// WorkerFetchImage logs information about a remote fetch for the image
+func (i *Impl) WorkerFetchImage(uri string) Finished {
+	st := time.Now()
+	i.l.Debug("Fetching file", "uri", uri)
+
+	return func(status int, err error) {
+		i.s.Timing(statsPrefix+"worker.fetch_file", time.Now().Sub(st), getStatusTags(status), 1)
+		i.l.Debug("Fetching file finished", "uri", uri, "status", status)
+
+		if err != nil {
+			i.l.Error("Error fetching file", "status", status, "uri", uri, "error", err)
+		}
+	}
+}
+
+// WorkerInvalidImage logs information when an invalid image is returned from the fetch
+func (i *Impl) WorkerInvalidImage(uri string, err error) {
+	i.l.Error("Invalid image format", "uri", uri, "error", err)
+	i.s.Incr(statsPrefix+"worker.invalid_image", nil, 1)
+}
+
+// WorkerFindFaces logs information related to the face lookup call
+func (i *Impl) WorkerFindFaces(uri string) Finished {
+	st := time.Now()
+	i.l.Debug("Find faces in image", "uri", uri)
+
+	return func(status int, err error) {
+		i.s.Timing(statsPrefix+"worker.find_faces", time.Now().Sub(st), getStatusTags(status), 1)
+		i.l.Debug("Find faces finished", "uri", uri, "status", status)
+
+		if err != nil {
+			i.l.Error("Unable to find faces", "handler", "emojify", "uri", uri, "error", err)
+		}
+	}
+}
+
+// WorkerEmojify logs information when emojifying the image
+func (i *Impl) WorkerEmojify(uri string) Finished {
+	st := time.Now()
+	i.l.Debug("Emojify image", "uri", uri)
+
+	return func(status int, err error) {
+		i.s.Timing(statsPrefix+"worker.find_faces", time.Now().Sub(st), getStatusTags(status), 1)
+		i.l.Debug("Find faces finished", "uri", uri, "status", status)
+
+		if err != nil {
+			i.l.Error("Unable to emojify", "uri", uri, "error", err)
+		}
+	}
+}
+
+// WorkerImageEncodeError logs information when an image encode error occurs
+func (i *Impl) WorkerImageEncodeError(uri string, err error) {
+	i.l.Error("Unable to encode file as jpg", "uri", uri, "error", err)
+	i.s.Incr(statsPrefix+"worker.image_encode_error", nil, 1)
 }
 
 func getStatusTags(status int) []string {
