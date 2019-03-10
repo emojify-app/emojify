@@ -15,6 +15,7 @@ require (
 	github.com/matryer/is v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.6 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
+	github.com/nicholasjackson/env v0.2.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/saibing/bingo v0.0.0-20190305053906-43cf0205459d // indirect

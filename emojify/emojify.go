@@ -29,22 +29,20 @@ type Emojify interface {
 // Impl implements the Emojify interface
 type Impl struct {
 	emojis         []image.Image
-	fetcher        Fetcher
 	fb             *facebox.Client
 	faceboxAddress string
 }
 
 // NewEmojify creates a new Emojify instance
-func NewEmojify(fetcher Fetcher, address, imagePath string) Emojify {
+func NewEmojify(address, imagePath string) Emojify {
 	emojis := loadEmojis(imagePath)
 
 	fb := facebox.New(fmt.Sprintf("http://%s", address))
 	fb.HTTPClient.Timeout = 60 * time.Second
 
 	return &Impl{
-		emojis:  emojis,
-		fetcher: fetcher,
-		fb:      fb,
+		emojis: emojis,
+		fb:     fb,
 	}
 }
 

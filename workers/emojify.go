@@ -27,6 +27,11 @@ type Emojify struct {
 	emojifier emojify.Emojify
 }
 
+// New returns a new Emojify worker
+func New(q queue.Queue, c cache.CacheClient, l logging.Logger, f emojify.Fetcher, e emojify.Emojify) *Emojify {
+	return &Emojify{q, c, l, f, e}
+}
+
 // Start processing items on the queue
 func (e *Emojify) Start() {
 	for qi := range e.queue.Pop() {
