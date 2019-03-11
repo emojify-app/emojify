@@ -7,6 +7,7 @@ import (
 	"image/jpeg"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/emojify-app/cache/protos/cache"
 	"github.com/emojify-app/emojify/emojify"
@@ -35,56 +36,59 @@ func New(q queue.Queue, c cache.CacheClient, l logging.Logger, f emojify.Fetcher
 // Start processing items on the queue
 func (e *Emojify) Start() {
 	for qi := range e.queue.Pop() {
+		sleepTime := 1 * time.Minute
+
 		done := e.logger.WorkerProcessQueueItem(qi.Item)
 
 		if qi.Error != nil {
 			done(http.StatusInternalServerError, qi.Error)
-			break
+			continue
 		}
 
 		// check the cache
 		ok, err := e.checkCache(qi.Item.ID)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			break
+			continue
 		}
 
 		// if we have a cached item do not re-process
 		if ok {
 			done(http.StatusOK, nil)
-			break
+			continue
 		}
 
 		// fetch the image
 		f, img, err := e.fetchImage(qi.Item.URI)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			break
+			continue
 		}
 
 		// find faces in the image
 		faces, err := e.findFaces(qi.Item.URI, f)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			break
+			continue
 		}
 
 		// process the image and replace faces with emoji
 		data, err := e.processImage(qi.Item.URI, faces, img)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			break
+			continue
 		}
 
 		// save the cache
 		err = e.saveCache(qi.Item.URI, qi.Item.ID, data)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
-			break
+			continue
 		}
 
 		done(http.StatusOK, nil)
 
+		time.Sleep(sleepTime)
 	}
 }
 

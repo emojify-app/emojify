@@ -54,18 +54,17 @@ func (r *Redis) Push(i *Item) error {
 func (r *Redis) Pop() chan PopResponse {
 	go func() {
 		for {
-
 			// get the first key from the set
 			k := r.client.ZPopMin(r.list, 1)
 			if err := k.Err(); err != nil {
 				r.popChan <- PopResponse{Error: err}
-				break
+				continue
 			}
 
 			res, err := k.Result()
 			if err != nil {
 				r.popChan <- PopResponse{Error: err}
-				break
+				continue
 			}
 
 			key := res[0].Member
@@ -74,7 +73,7 @@ func (r *Redis) Pop() chan PopResponse {
 			i := r.client.Get(key.(string))
 			if err := i.Err(); err != nil {
 				r.popChan <- PopResponse{Error: err}
-				break
+				continue
 			}
 
 			// delete the item from the db now it has been retrieved
@@ -85,11 +84,10 @@ func (r *Redis) Pop() chan PopResponse {
 			err = json.Unmarshal([]byte(i.String()), item)
 			if err != nil {
 				r.popChan <- PopResponse{Error: err}
-				break
+				continue
 			}
 
 			r.popChan <- PopResponse{Item: item}
-
 		}
 	}()
 
