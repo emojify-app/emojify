@@ -35,8 +35,10 @@ func New(q queue.Queue, c cache.CacheClient, l logging.Logger, f emojify.Fetcher
 
 // Start processing items on the queue
 func (e *Emojify) Start() {
+	sleepTime := 30 * time.Second
 	for qi := range e.queue.Pop() {
-		sleepTime := 1 * time.Minute
+		time.Sleep(sleepTime)
+		sleepTime = 30 * time.Second // reset sleeptime
 
 		done := e.logger.WorkerProcessQueueItem(qi.Item)
 
@@ -87,8 +89,7 @@ func (e *Emojify) Start() {
 		}
 
 		done(http.StatusOK, nil)
-
-		time.Sleep(sleepTime)
+		sleepTime = 100 * time.Millisecond // reset sleeptime
 	}
 }
 
