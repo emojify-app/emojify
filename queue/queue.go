@@ -27,7 +27,7 @@ type PopResponse struct {
 // Queue defines the interface methods for a FIFO queue
 type Queue interface {
 	// Push an item onto the queue
-	Push(*Item) error
+	Push(*Item) (position int, length int, err error)
 	// Pop the last item off the queue, blocks if there is no items on the queue
 	Pop() chan PopResponse
 	// Position allows you to query the position of an item in the queue

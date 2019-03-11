@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/emojify-app/cache/protos/cache"
 	"github.com/emojify-app/emojify/emojify"
@@ -74,7 +75,7 @@ func main() {
 	f := emojify.NewFetcher()
 	e := emojify.NewEmojify(*faceboxAddress, "./images")
 
-	w := workers.New(q, cc, l, f, e)
+	w := workers.New(q, cc, l, f, e, 30*time.Second, 100*time.Millisecond)
 	go w.Start() // start the worker and process queue items
 
 	http.HandleFunc("/health", func(rw http.ResponseWriter, r *http.Request) {

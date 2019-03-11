@@ -23,7 +23,7 @@ var base64URL = "aHR0cDovL2FiY2RlLmNvbQ=="
 
 func setup(t *testing.T, pos, ql int) *Emojify {
 	mockQueue = &queue.MockQueue{}
-	mockQueue.On("Push", mock.Anything).Return(nil)
+	mockQueue.On("Push", mock.Anything).Return(0, 0, nil)
 	mockQueue.On("Position", mock.Anything).Return(pos, ql, nil)
 
 	mockCache = &cache.ClientMock{}

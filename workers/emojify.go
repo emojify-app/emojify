@@ -21,29 +21,39 @@ import (
 
 // Emojify is a worker which processes queue items and emojifys them
 type Emojify struct {
-	queue     queue.Queue
-	cache     cache.CacheClient
-	logger    logging.Logger
-	fetcher   emojify.Fetcher
-	emojifier emojify.Emojify
+	queue       queue.Queue
+	cache       cache.CacheClient
+	logger      logging.Logger
+	fetcher     emojify.Fetcher
+	emojifier   emojify.Emojify
+	errorDelay  time.Duration
+	normalDelay time.Duration
 }
 
 // New returns a new Emojify worker
-func New(q queue.Queue, c cache.CacheClient, l logging.Logger, f emojify.Fetcher, e emojify.Emojify) *Emojify {
-	return &Emojify{q, c, l, f, e}
+func New(q queue.Queue, c cache.CacheClient, l logging.Logger, f emojify.Fetcher, e emojify.Emojify, ed, nd time.Duration) *Emojify {
+	return &Emojify{q, c, l, f, e, ed, nd}
 }
 
 // Start processing items on the queue
 func (e *Emojify) Start() {
-	sleepTime := 30 * time.Second
+	sleepTime := e.errorDelay
+
 	for qi := range e.queue.Pop() {
 		time.Sleep(sleepTime)
-		sleepTime = 30 * time.Second // reset sleeptime
+		sleepTime = e.errorDelay // reset sleeptime
 
 		done := e.logger.WorkerProcessQueueItem(qi.Item)
 
 		if qi.Error != nil {
 			done(http.StatusInternalServerError, qi.Error)
+			continue
+		}
+
+		// do we have an item to process?
+		if qi.Item == nil {
+			e.logger.WorkerQueueStatus(0)
+			done(http.StatusNotFound, nil)
 			continue
 		}
 
@@ -89,7 +99,7 @@ func (e *Emojify) Start() {
 		}
 
 		done(http.StatusOK, nil)
-		sleepTime = 100 * time.Millisecond // reset sleeptime
+		sleepTime = e.normalDelay // reset sleeptime
 	}
 }
 

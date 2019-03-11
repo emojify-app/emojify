@@ -8,11 +8,11 @@ type MockQueue struct {
 }
 
 // Push an item onto the queue
-func (q *MockQueue) Push(i *Item) error {
+func (q *MockQueue) Push(i *Item) (int, int, error) {
 
 	args := q.Called(i)
 
-	return args.Error(0)
+	return args.Get(0).(int), args.Get(1).(int), args.Error(2)
 }
 
 // Pop the last item off the queue

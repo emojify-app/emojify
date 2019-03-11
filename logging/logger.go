@@ -31,6 +31,7 @@ type Logger interface {
 
 	// Emojify Worker
 	WorkerProcessQueueItem(*queue.Item) Finished
+	WorkerQueueStatus(items int)
 	WorkerFetchImage(uri string) Finished
 	WorkerInvalidImage(uri string, err error)
 	WorkerFindFaces(uri string) Finished
@@ -234,6 +235,12 @@ func (i *Impl) WorkerEmojify(uri string) Finished {
 			i.l.Error("Unable to emojify", "uri", uri, "error", err)
 		}
 	}
+}
+
+// WorkerQueueStatus logs information about the number of queue items
+func (i *Impl) WorkerQueueStatus(items int) {
+	i.l.Debug("Queue status", "items", items)
+	i.s.Gauge(statsPrefix+"queue.size", float64(items), nil, 1)
 }
 
 // WorkerImageEncodeError logs information when an image encode error occurs

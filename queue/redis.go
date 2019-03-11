@@ -28,26 +28,26 @@ func New(addr, password string, db int) (*Redis, error) {
 }
 
 // Push an item onto the queue
-func (r *Redis) Push(i *Item) error {
+func (r *Redis) Push(i *Item) (position int, length int, err error) {
 	//serialize the item to json
 	j, err := json.Marshal(i)
 	if err != nil {
-		return fmt.Errorf("unable marshal item to json: %s", err)
+		return 0, 0, fmt.Errorf("unable marshal item to json: %s", err)
 	}
 
 	// add the item to the db
 	s := r.client.Set(i.ID, string(j), r.expiration)
 	if err := s.Err(); err != nil {
-		return fmt.Errorf("unable to add item to set: %s", err)
+		return 0, 0, fmt.Errorf("unable to add item to set: %s", err)
 	}
 
 	// store the item in a ordered set
 	c := r.client.ZAdd(r.list, redis.Z{Score: float64(time.Now().UnixNano()), Member: i.ID})
 	if err := c.Err(); err != nil {
-		return fmt.Errorf("unable to add item to ordered list: %s", err)
+		return 0, 0, fmt.Errorf("unable to add item to ordered list: %s", err)
 	}
 
-	return nil
+	return r.Position(i.ID)
 }
 
 // Pop returns a channel containing items from the front of the queue

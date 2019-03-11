@@ -58,13 +58,17 @@ func (e *Emojify) Create(ctx context.Context, uri *wrappers.StringValue) (*emoji
 	}
 
 	queueDone := e.logger.QueuePut(id)
-	err = e.workerQueue.Push(qi)
+	pos, length, err := e.workerQueue.Push(qi)
 	if err != nil {
 		queueDone(http.StatusInternalServerError, err)
 		done(http.StatusInternalServerError, err)
 		return nil, grpc.Errorf(codes.Internal, "error addding to queue: %s", err)
 	}
 
+	ei.QueuePosition = int32(pos)
+	ei.QueueLength = int32(length)
+
+	e.logger.WorkerQueueStatus(length)
 	queueDone(http.StatusOK, nil)
 	done(http.StatusOK, nil)
 	return ei, nil
