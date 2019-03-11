@@ -67,9 +67,14 @@ func (r *Redis) Pop() chan PopResponse {
 				continue
 			}
 
-			key := res[0].Member
+			// check that an item has been returned, if not sleep
+			if len(res) < 1 {
+				r.popChan <- PopResponse{Error: fmt.Errorf("No items on queue")}
+				continue
+			}
 
 			// get the corresponding item from the db
+			key := res[0].Member
 			i := r.client.Get(key.(string))
 			if err := i.Err(); err != nil {
 				r.popChan <- PopResponse{Error: err}
