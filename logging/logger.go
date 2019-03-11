@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-var statsPrefix = "service.emojify"
+var statsPrefix = "service.emojify."
 
 // Logger defines an interface for common logging operations
 type Logger interface {
