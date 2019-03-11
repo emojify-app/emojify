@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// setup dependencies
-	l := logging.New(*statsDAddress)
+	l := logging.New(*statsDAddress, *logLevel)
 
 	q, err := queue.New(*redisAddress, *redisPassword, *redisDB)
 	if err != nil {

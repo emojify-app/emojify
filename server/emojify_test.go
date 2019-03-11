@@ -29,7 +29,7 @@ func setup(t *testing.T, pos, ql int) *Emojify {
 	mockCache = &cache.ClientMock{}
 	mockCache.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(&wrappers.BoolValue{Value: false}, nil)
 
-	logger := logging.New("localhost:9125")
+	logger := logging.New("localhost:9125", "debug")
 
 	return New(mockQueue, mockCache, logger)
 }

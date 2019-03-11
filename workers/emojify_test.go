@@ -62,7 +62,7 @@ func setup(t *testing.T, timeout time.Duration) *testData {
 	td.mockEmojify.On("GetFaces", td.mockReader).Return(td.mockFaces, nil)
 	td.mockEmojify.On("Emojimise", td.mockImage, td.mockFaces).Return(td.mockEmojifyImage, nil)
 
-	logger := logging.New("localhost:9125")
+	logger := logging.New("localhost:9125", "debug")
 
 	td.emo = &Emojify{td.mockQueue, td.mockCache, logger, td.mockFetcher, td.mockEmojify, 1 * time.Millisecond, 1 * time.Millisecond}
 	go td.emo.Start() // start the app

@@ -49,8 +49,13 @@ type Impl struct {
 }
 
 // New creates a new logger implementation
-func New(statsdAddress string) Logger {
-	l := hclog.Default()
+func New(statsdAddress string, logLevel string) Logger {
+	o := &hclog.LoggerOptions{}
+	o.Name = "emojify"
+	o.Level = hclog.LevelFromString(logLevel)
+
+	l := hclog.New(o)
+
 	s, err := statsd.New(statsdAddress)
 	if err != nil {
 		panic(err)
