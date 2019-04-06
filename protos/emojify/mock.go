@@ -17,7 +17,7 @@ func (m *ClientMock) Check(ctx context.Context, in *HealthCheckRequest, opts ...
 	args := m.Called(ctx, in, opts)
 
 	if hr := args.Get(0); hr != nil {
-		return hr.(*HealthCheckResponse), nil
+		return hr.(*HealthCheckResponse), args.Error(1)
 	}
 
 	return nil, args.Error(1)
