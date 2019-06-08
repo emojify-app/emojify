@@ -34,6 +34,15 @@ func setup(t *testing.T, pos, ql int) *Emojify {
 	return New(mockQueue, mockCache, logger)
 }
 
+func TestHealthReturnsValidResponse(t *testing.T) {
+	e := setup(t, 0, 0)
+
+	ret, err := e.Check(context.Background(), &emojify.HealthCheckRequest{})
+
+	assert.Nil(t, err)
+	assert.NotNil(t, ret)
+}
+
 func TestCreateAddsItemToTheQueueIfNotPresent(t *testing.T) {
 	e := setup(t, 0, 0)
 	id := &wrappers.StringValue{Value: url}

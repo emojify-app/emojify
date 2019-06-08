@@ -29,7 +29,10 @@ func New(q queue.Queue, cc cache.CacheClient, l logging.Logger) *Emojify {
 
 // Check is a gRPC health check
 func (e *Emojify) Check(context.Context, *emojify.HealthCheckRequest) (*emojify.HealthCheckResponse, error) {
-	return nil, nil
+	resp := emojify.HealthCheckResponse{}
+	resp.Status = emojify.HealthCheckResponse_SERVING
+
+	return &resp, nil
 }
 
 // Create an Emojify request to process an image
