@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/jpeg"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -43,8 +44,8 @@ func (e *Emojify) Start() {
 		sleepTime = e.errorDelay // reset sleeptime
 
 		done := e.logger.WorkerProcessQueueItem(qi.Item)
-
 		if qi.Error != nil {
+			log.Println("Error returned from queue", qi.Error)
 			done(http.StatusInternalServerError, qi.Error)
 			continue
 		}
@@ -65,10 +66,12 @@ func (e *Emojify) Start() {
 
 		// if we have a cached item do not re-process
 		if ok {
+			e.logger.Log().Debug("Found cached item", "item", qi.Item)
 			done(http.StatusOK, nil)
 			continue
 		}
 
+		e.logger.Log().Debug("Fetch")
 		// fetch the image
 		f, img, err := e.fetchImage(qi.Item.URI)
 		if err != nil {

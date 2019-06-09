@@ -25,6 +25,7 @@ func setup(t *testing.T, pos, ql int) *Emojify {
 	mockQueue = &queue.MockQueue{}
 	mockQueue.On("Push", mock.Anything).Return(0, 0, nil)
 	mockQueue.On("Position", mock.Anything).Return(pos, ql, nil)
+	mockQueue.On("Ping").Return(nil)
 
 	mockCache = &cache.ClientMock{}
 	mockCache.On("Exists", mock.Anything, mock.Anything, mock.Anything).Return(&wrappers.BoolValue{Value: false}, nil)
@@ -34,7 +35,7 @@ func setup(t *testing.T, pos, ql int) *Emojify {
 	return New(mockQueue, mockCache, logger)
 }
 
-func TestHealthReturnsValidResponse(t *testing.T) {
+func TestHealthReturnsValidResponseWhenOK(t *testing.T) {
 	e := setup(t, 0, 0)
 
 	ret, err := e.Check(context.Background(), &emojify.HealthCheckRequest{})
@@ -54,6 +55,11 @@ func TestCreateAddsItemToTheQueueIfNotPresent(t *testing.T) {
 
 	mockQueue.AssertCalled(t, "Position", mock.Anything)
 	mockQueue.AssertCalled(t, "Push", mock.Anything)
+
+	// check the item pushed to the queue
+	item := mockQueue.Calls[1].Arguments[0].(*queue.Item)
+	assert.Equal(t, url, item.URI)
+
 	assert.Equal(t, base64URL, i.Id)
 	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_QUEUED}, i.GetStatus())
 }

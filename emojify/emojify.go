@@ -3,6 +3,7 @@ package emojify
 import (
 	"image"
 	"image/draw"
+	_ "image/png"
 	"io"
 	"math/rand"
 	"net/http"
@@ -32,13 +33,13 @@ type Impl struct {
 }
 
 // NewEmojify creates a new Emojify instance
-func NewEmojify(imagePath string, client client.Client) Emojify {
-	emojis := loadEmojis(imagePath)
+func NewEmojify(imagePath string, client client.Client) (Emojify, error) {
+	emojis, err := loadEmojis(imagePath)
 
 	return &Impl{
 		emojis: emojis,
 		fd:     client,
-	}
+	}, err
 }
 
 // GetFaces finds the faces in an image
@@ -85,11 +86,11 @@ func (e *Impl) randomEmoji() image.Image {
 	return e.emojis[rand.Intn(len(e.emojis))]
 }
 
-func loadEmojis(path string) []image.Image {
+func loadEmojis(path string) ([]image.Image, error) {
 	images := make([]image.Image, 0)
 	root := path
 
-	filepath.Walk(path, func(path string, f os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(path string, f os.FileInfo, err error) error {
 		if !f.IsDir() {
 			reader, err := os.Open(root + f.Name())
 			if err != nil {
@@ -106,5 +107,5 @@ func loadEmojis(path string) []image.Image {
 		return nil
 	})
 
-	return images
+	return images, err
 }

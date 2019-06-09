@@ -32,4 +32,5 @@ type Queue interface {
 	Pop() chan PopResponse
 	// Position allows you to query the position of an item in the queue
 	Position(key string) (position, length int, err error)
+	Ping() error
 }

@@ -3,6 +3,7 @@ package queue
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -53,6 +54,7 @@ func (r *Redis) Push(i *Item) (position int, length int, err error) {
 // Pop returns a channel containing items from the front of the queue
 func (r *Redis) Pop() chan PopResponse {
 	go func() {
+		// loop over the queue constantly returning items
 		for {
 			// get the first key from the set
 			k := r.client.ZPopMin(r.list, 1)
@@ -69,29 +71,42 @@ func (r *Redis) Pop() chan PopResponse {
 
 			// check that an item has been returned, if not sleep
 			if len(res) < 1 {
+				log.Println("No items found", k)
 				r.popChan <- PopResponse{}
 				continue
 			}
+
+			log.Println("Found item", k)
 
 			// get the corresponding item from the db
 			key := res[0].Member
 			i := r.client.Get(key.(string))
 			if err := i.Err(); err != nil {
+				log.Println("item not in db", k)
 				r.popChan <- PopResponse{Error: err}
 				continue
 			}
 
 			// delete the item from the db now it has been retrieved
+			log.Println("delete db", k)
 			r.client.Del(key.(string))
 
 			// unmarshal the item
-			item := &Item{}
-			err = json.Unmarshal([]byte(i.String()), item)
+			data, err := i.Result()
 			if err != nil {
 				r.popChan <- PopResponse{Error: err}
 				continue
 			}
 
+			item := &Item{}
+			err = json.Unmarshal([]byte(data), item)
+			if err != nil {
+				log.Println("Unable to marshal item", data)
+				r.popChan <- PopResponse{Error: err}
+				continue
+			}
+
+			log.Printf("Returning item %#v\n", item)
 			r.popChan <- PopResponse{Item: item}
 		}
 	}()
@@ -111,5 +126,15 @@ func (r *Redis) Position(key string) (position, length int, err error) {
 		return 0, 0, fmt.Errorf("unable to get set count: %s", err)
 	}
 
-	return int(pos.Val()), int(max.Val()), nil
+	return int(pos.Val() + 1), int(max.Val()), nil
+}
+
+// Ping Redis to check up
+func (r *Redis) Ping() error {
+	status := r.client.Ping()
+	if err := status.Err(); err != nil {
+		return err
+	}
+
+	return nil
 }

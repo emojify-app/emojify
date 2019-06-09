@@ -15,6 +15,7 @@ require (
 	github.com/nicholasjackson/env v0.3.0
 	github.com/nsf/termbox-go v0.0.0-20190325093121-288510b9734e
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/rkt/rkt v1.30.0
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/net v0.0.0-20190301231341-16b79f2e4e95
 	golang.org/x/sys v0.0.0-20190308023053-584f3b12f43e // indirect

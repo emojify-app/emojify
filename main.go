@@ -75,7 +75,11 @@ func main() {
 
 	f := emojify.NewFetcher()
 	fd := client.NewClient(*faceboxAddress)
-	e := emojify.NewEmojify("./images", fd)
+	e, err := emojify.NewEmojify("./images/", fd)
+	if err != nil {
+		l.Log().Error("Unable to load emojies", err)
+		os.Exit(1)
+	}
 
 	w := workers.New(q, cc, l, f, e, 30*time.Second, 100*time.Millisecond)
 	go w.Start() // start the worker and process queue items

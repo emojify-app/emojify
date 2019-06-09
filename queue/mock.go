@@ -28,3 +28,9 @@ func (q *MockQueue) Position(key string) (position, length int, err error) {
 
 	return args.Get(0).(int), args.Get(1).(int), args.Error(2)
 }
+
+// Ping is a mock implementation of the the Ping function
+func (q *MockQueue) Ping() error {
+	args := q.Called()
+	return args.Error(0)
+}
