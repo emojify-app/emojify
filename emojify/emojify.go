@@ -1,17 +1,16 @@
 package emojify
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/machinebox/sdk-go/boxutil"
-	"github.com/machinebox/sdk-go/facebox"
+	"github.com/emojify-app/face-detection/client"
 	"github.com/nfnt/resize"
 )
 
@@ -21,50 +20,50 @@ func init() {
 
 // Emojify defines an interface for emojify operations
 type Emojify interface {
-	GetFaces(f io.ReadSeeker) ([]facebox.Face, error)
-	Emojimise(image.Image, []facebox.Face) (image.Image, error)
-	Health() (*boxutil.Info, error)
+	GetFaces(f io.ReadSeeker) ([]image.Rectangle, error)
+	Emojimise(image.Image, []image.Rectangle) (image.Image, error)
+	Health() (int, error)
 }
 
 // Impl implements the Emojify interface
 type Impl struct {
-	emojis         []image.Image
-	fb             *facebox.Client
-	faceboxAddress string
+	emojis []image.Image
+	fd     client.Client
 }
 
 // NewEmojify creates a new Emojify instance
-func NewEmojify(address, imagePath string) Emojify {
+func NewEmojify(imagePath string, client client.Client) Emojify {
 	emojis := loadEmojis(imagePath)
-
-	fb := facebox.New(fmt.Sprintf("http://%s", address))
-	fb.HTTPClient.Timeout = 60 * time.Second
 
 	return &Impl{
 		emojis: emojis,
-		fb:     fb,
+		fd:     client,
 	}
 }
 
 // GetFaces finds the faces in an image
-func (e *Impl) GetFaces(r io.ReadSeeker) ([]facebox.Face, error) {
+func (e *Impl) GetFaces(r io.ReadSeeker) ([]image.Rectangle, error) {
 	_, err := r.Seek(0, os.SEEK_SET)
 	if err != nil {
 		return nil, err
 	}
 
-	// ok to continue
-	return e.fb.Check(r)
+	resp, err := e.fd.DetectFaces(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Faces, nil
 }
 
 // Emojimise detects faces in an image and replaces them with emoji
-func (e *Impl) Emojimise(src image.Image, faces []facebox.Face) (image.Image, error) {
+func (e *Impl) Emojimise(src image.Image, faces []image.Rectangle) (image.Image, error) {
 	dstImage := image.NewRGBA(src.Bounds())
 	draw.Draw(dstImage, src.Bounds(), src, image.ZP, draw.Src)
 
 	for _, face := range faces {
-		m := resize.Resize(uint(face.Rect.Height), uint(face.Rect.Width), e.randomEmoji(), resize.Lanczos3)
-		sp2 := image.Point{face.Rect.Left, face.Rect.Top}
+		m := resize.Resize(uint(face.Size().Y), uint(face.Size().X), e.randomEmoji(), resize.Lanczos3)
+		sp2 := image.Point{face.Min.X, face.Min.Y}
 		r2 := image.Rectangle{sp2, sp2.Add(m.Bounds().Size())}
 
 		draw.Draw(
@@ -78,8 +77,8 @@ func (e *Impl) Emojimise(src image.Image, faces []facebox.Face) (image.Image, er
 }
 
 // Health returns health info about facebox
-func (e *Impl) Health() (*boxutil.Info, error) {
-	return e.fb.Info()
+func (e *Impl) Health() (int, error) {
+	return http.StatusOK, nil
 }
 
 func (e *Impl) randomEmoji() image.Image {

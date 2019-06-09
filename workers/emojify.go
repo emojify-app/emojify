@@ -14,7 +14,6 @@ import (
 	"github.com/emojify-app/emojify/logging"
 	"github.com/emojify-app/emojify/queue"
 	"github.com/golang/protobuf/ptypes/wrappers"
-	"github.com/machinebox/sdk-go/facebox"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 )
@@ -145,7 +144,7 @@ func (e *Emojify) fetchImage(uri string) (io.ReadSeeker, image.Image, error) {
 	return f, img, nil
 }
 
-func (e *Emojify) findFaces(uri string, r io.ReadSeeker) ([]facebox.Face, error) {
+func (e *Emojify) findFaces(uri string, r io.ReadSeeker) ([]image.Rectangle, error) {
 	done := e.logger.WorkerFindFaces(uri)
 
 	f, err := e.emojifier.GetFaces(r)
@@ -158,7 +157,7 @@ func (e *Emojify) findFaces(uri string, r io.ReadSeeker) ([]facebox.Face, error)
 	return f, nil
 }
 
-func (e *Emojify) processImage(uri string, faces []facebox.Face, img image.Image) ([]byte, error) {
+func (e *Emojify) processImage(uri string, faces []image.Rectangle, img image.Image) ([]byte, error) {
 	done := e.logger.WorkerEmojify(uri)
 
 	i, err := e.emojifier.Emojimise(img, faces)

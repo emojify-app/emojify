@@ -3,9 +3,8 @@ package emojify
 import (
 	"image"
 	"io"
+	"time"
 
-	"github.com/machinebox/sdk-go/boxutil"
-	"github.com/machinebox/sdk-go/facebox"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -15,7 +14,7 @@ type MockEmojify struct {
 }
 
 // Emojimise is a mock implementation of the interface function
-func (m *MockEmojify) Emojimise(src image.Image, faces []facebox.Face) (image.Image, error) {
+func (m *MockEmojify) Emojimise(src image.Image, faces []image.Rectangle) (image.Image, error) {
 	args := m.Called(src, faces)
 
 	if args.Get(0) == nil {
@@ -26,23 +25,26 @@ func (m *MockEmojify) Emojimise(src image.Image, faces []facebox.Face) (image.Im
 }
 
 // GetFaces is a mock implementation of the interface function
-func (m *MockEmojify) GetFaces(r io.ReadSeeker) ([]facebox.Face, error) {
+func (m *MockEmojify) GetFaces(r io.ReadSeeker) ([]image.Rectangle, error) {
 	args := m.Called(r)
+
+	// wait for the client to block
+	time.Sleep(10 * time.Millisecond)
 
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	return args.Get(0).([]facebox.Face), args.Error(1)
+	return args.Get(0).([]image.Rectangle), args.Error(1)
 }
 
 // Health is a mock implementation of the interface function
-func (m *MockEmojify) Health() (*boxutil.Info, error) {
+func (m *MockEmojify) Health() (int, error) {
 	args := m.Called()
 
 	if args.Get(0) == nil {
-		return nil, args.Error(1)
+		return 0, args.Error(1)
 	}
 
-	return args.Get(0).(*boxutil.Info), args.Error(1)
+	return args.Get(0).(int), args.Error(1)
 }

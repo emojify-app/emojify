@@ -13,7 +13,6 @@ import (
 	"github.com/emojify-app/emojify/logging"
 	"github.com/emojify-app/emojify/queue"
 	"github.com/golang/protobuf/ptypes/wrappers"
-	"github.com/machinebox/sdk-go/facebox"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -26,7 +25,7 @@ type testData struct {
 	mockFetcher      *emojify.MockFetcher
 	mockEmojify      *emojify.MockEmojify
 	mockReader       *bytes.Reader
-	mockFaces        []facebox.Face
+	mockFaces        []image.Rectangle
 	mockImage        image.Image
 	mockEmojifyImage image.Image
 }
@@ -46,7 +45,7 @@ func setup(t *testing.T, timeout time.Duration) *testData {
 	td.mockQueue.On("Pop").Return(td.popChan)
 
 	td.mockReader = bytes.NewReader([]byte("abc"))
-	td.mockFaces = []facebox.Face{facebox.Face{}}
+	td.mockFaces = []image.Rectangle{image.Rect(0, 0, 10, 10)}
 	td.mockImage = image.NewUniform(color.Black)
 	td.mockEmojifyImage = image.NewRGBA64(image.Rect(0, 0, 400, 400))
 

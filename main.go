@@ -13,6 +13,7 @@ import (
 	"github.com/emojify-app/emojify/queue"
 	"github.com/emojify-app/emojify/server"
 	"github.com/emojify-app/emojify/workers"
+	"github.com/emojify-app/face-detection/client"
 	"github.com/nicholasjackson/env"
 	"google.golang.org/grpc"
 )
@@ -73,7 +74,8 @@ func main() {
 	cc := cache.NewCacheClient(conn)
 
 	f := emojify.NewFetcher()
-	e := emojify.NewEmojify(*faceboxAddress, "./images")
+	fd := client.NewClient(*faceboxAddress)
+	e := emojify.NewEmojify("./images", fd)
 
 	w := workers.New(q, cc, l, f, e, 30*time.Second, 100*time.Millisecond)
 	go w.Start() // start the worker and process queue items
