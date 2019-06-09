@@ -30,7 +30,7 @@ func main() {
 	log.Println(resp.String())
 
 	// post an image to the server
-	postresp, err := emojifyClient.Create(context.Background(), &wrappers.StringValue{Value: "https://emojify.today/pictures/1.jpg"})
+	postresp, err := emojifyClient.Create(context.Background(), &wrappers.StringValue{Value: "https://emojify.today/pictures/6.jpg"})
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
@@ -38,14 +38,22 @@ func main() {
 
 	log.Println("Create finished", postresp.String())
 
-	for {
-		getresp, err := emojifyClient.Query(context.Background(), &wrappers.StringValue{Value: postresp.GetId()})
-		if err != nil {
-			log.Println("Get error", err)
-		} else {
-			log.Println("Get finished", getresp)
-		}
+	if postresp.GetStatus().GetStatus() != emojify.QueryStatus_FINISHED {
+		for {
+			getresp, err := emojifyClient.Query(context.Background(), &wrappers.StringValue{Value: postresp.GetId()})
+			if err != nil {
+				log.Println("Get error", err)
+			} else {
+				log.Println("Get finished", getresp)
+				if getresp.GetStatus().GetStatus() == emojify.QueryStatus_FINISHED {
+					break
+				}
+			}
 
-		time.Sleep(5 * time.Second)
+			time.Sleep(5 * time.Second)
+		}
 	}
+
+	// fetch the image
+	log.Println("Complete")
 }

@@ -7,25 +7,35 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
+	"github.com/hashicorp/go-hclog"
 )
 
 // Redis is a queue implementation for the Redis server
 type Redis struct {
-	client     *redis.Client
-	list       string
-	expiration time.Duration
-	popChan    chan PopResponse
+	client      *redis.Client
+	list        string
+	expiration  time.Duration
+	popChan     chan PopResponse
+	currentItem *Item
+	logger      hclog.Logger
+	errorDelay  time.Duration
 }
 
 // New creates a new Redis queue
-func New(addr, password string, db int) (*Redis, error) {
+func New(addr, password string, db int, l hclog.Logger) (*Redis, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
 		DB:       db,
 	})
 
-	return &Redis{client, "worker_queue", 30 * time.Minute, make(chan PopResponse)}, nil
+	return &Redis{
+		client:     client,
+		list:       "worker_queue",
+		expiration: 30 * time.Minute,
+		logger:     l,
+		errorDelay: 5 * time.Second,
+		popChan:    make(chan PopResponse)}, nil
 }
 
 // Push an item onto the queue
@@ -59,31 +69,31 @@ func (r *Redis) Pop() chan PopResponse {
 			// get the first key from the set
 			k := r.client.ZPopMin(r.list, 1)
 			if err := k.Err(); err != nil {
-				r.popChan <- PopResponse{Error: err}
+				r.logger.Error("Error reading from queue", "error", err)
+				time.Sleep(r.errorDelay)
 				continue
 			}
 
 			res, err := k.Result()
 			if err != nil {
-				r.popChan <- PopResponse{Error: err}
+				r.logger.Error("Error getting result from queue item", "error", err)
+				time.Sleep(r.errorDelay)
 				continue
 			}
 
 			// check that an item has been returned, if not sleep
 			if len(res) < 1 {
-				log.Println("No items found", k)
-				r.popChan <- PopResponse{}
+				r.logger.Error("No items in queue item", "error", err)
+				time.Sleep(r.errorDelay)
 				continue
 			}
-
-			log.Println("Found item", k)
 
 			// get the corresponding item from the db
 			key := res[0].Member
 			i := r.client.Get(key.(string))
 			if err := i.Err(); err != nil {
-				log.Println("item not in db", k)
-				r.popChan <- PopResponse{Error: err}
+				r.logger.Error("Queue item not in database", "error", err)
+				time.Sleep(r.errorDelay)
 				continue
 			}
 
@@ -94,20 +104,26 @@ func (r *Redis) Pop() chan PopResponse {
 			// unmarshal the item
 			data, err := i.Result()
 			if err != nil {
-				r.popChan <- PopResponse{Error: err}
+				r.logger.Error("Deleting queue item from database", "error", err)
+				time.Sleep(r.errorDelay)
 				continue
 			}
 
 			item := &Item{}
 			err = json.Unmarshal([]byte(data), item)
 			if err != nil {
-				log.Println("Unable to marshal item", data)
-				r.popChan <- PopResponse{Error: err}
+				r.logger.Error("Unable to marshal item from database", "error", err)
+				time.Sleep(r.errorDelay)
 				continue
 			}
 
-			log.Printf("Returning item %#v\n", item)
+			r.logger.Debug("Returning item from queue", "item", item)
+
 			r.popChan <- PopResponse{Item: item}
+
+			// store the currently processing item in case the client
+			// queries as it has now been removed from the queue
+			r.currentItem = item
 		}
 	}()
 
@@ -116,14 +132,29 @@ func (r *Redis) Pop() chan PopResponse {
 
 // Position allows you to query the position of an item in the queue
 func (r *Redis) Position(key string) (position, length int, err error) {
-	pos := r.client.ZRank(r.list, key)
-	if err := pos.Err(); err != nil {
-		return 0, 0, fmt.Errorf("unable to find item position: %s", err)
-	}
-
 	max := r.client.ZCount(r.list, "-inf", "+inf")
 	if err := max.Err(); err != nil {
 		return 0, 0, fmt.Errorf("unable to get set count: %s", err)
+	}
+
+	if r.currentItem != nil {
+		r.logger.Debug("Current item", "item", r.currentItem.ID, "key", key)
+	}
+
+	// if the key is the current item id then return the item as we are processing
+	if r.currentItem != nil && key == r.currentItem.ID {
+		return 1, int(max.Val() + 1), nil
+	}
+
+	// if the queue is empty do not lookup
+	if max.Val() == 0 {
+		return 0, 0, nil
+	}
+
+	// otherwise return the item from the list
+	pos := r.client.ZRank(r.list, key)
+	if err := pos.Err(); err != nil {
+		return 0, 0, fmt.Errorf("unable to find item position: %s", err)
 	}
 
 	return int(pos.Val() + 1), int(max.Val()), nil

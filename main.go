@@ -60,7 +60,7 @@ func main() {
 	// setup dependencies
 	l := logging.New(*statsDAddress, *logLevel)
 
-	q, err := queue.New(*redisAddress, *redisPassword, *redisDB)
+	q, err := queue.New(*redisAddress, *redisPassword, *redisDB, l.Log().Named("queue"))
 	if err != nil {
 		l.Log().Error("Unable to create queue", err)
 		os.Exit(1)
