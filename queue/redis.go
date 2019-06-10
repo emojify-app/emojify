@@ -126,6 +126,8 @@ func (r *Redis) Pop() chan PopResponse {
 
 			// store the currently processing item in case the client
 			// queries as it has now been removed from the queue
+			// there is a race condition which stops this working correctly
+			// TODO Find a better way of tracking processing items
 			r.currentItem = item
 		}
 	}()
