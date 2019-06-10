@@ -63,7 +63,14 @@ func setup(t *testing.T, timeout time.Duration) *testData {
 
 	logger := logging.New("localhost:9125", "debug")
 
-	td.emo = &Emojify{td.mockQueue, td.mockCache, logger, td.mockFetcher, td.mockEmojify, 1 * time.Millisecond, 1 * time.Millisecond}
+	td.emo = &Emojify{
+		queue:       td.mockQueue,
+		cache:       td.mockCache,
+		logger:      logger,
+		fetcher:     td.mockFetcher,
+		emojifier:   td.mockEmojify,
+		errorDelay:  1 * time.Millisecond,
+		normalDelay: 1 * time.Millisecond}
 	go td.emo.Start() // start the app
 
 	return td
