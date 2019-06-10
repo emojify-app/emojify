@@ -1,0 +1,19 @@
+version: '3.7'
+services:
+  redis:
+    image: "redis:5.0.5-alpine3.9"
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--requirepass", "password"]
+  cache:
+    image: "nicholasjackson/emojify-cache:v0.4.3"
+    ports:
+      - "9080:9090"
+    environment:
+      BIND_ADDRESS: "0.0.0.0"
+  facedetect:
+    image: "nicholasjackson/emojify-facedetection:v0.10.0"
+    ports:
+      - "9070:9090"
+    environment:
+      BIND_ADDRESS: "0.0.0.0"

@@ -1,4 +1,4 @@
-package logic
+package emojify
 
 import (
 	"image"

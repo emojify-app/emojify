@@ -1,36 +1,41 @@
-package logic
+package emojify
 
 import (
 	"bytes"
 	"image"
-
-	// import images for decoding
-	_ "image/jpeg"
-	_ "image/png"
-
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 )
 
-// MaxFileSize is the maximum allowable image size
-const MaxFileSize = 4000000 // 4MB
+// MaxFileSize is the maximum size of a file which can be downloaded
+const MaxFileSize = 10000000 // 10MB
 
-// Fetcher defines an interface for retrieving an image from a url
+// Fetcher defines an interface for downloading files
 type Fetcher interface {
 	FetchImage(uri string) (io.ReadSeeker, error)
 	ReaderToImage(r io.ReadSeeker) (image.Image, error)
 }
 
-// FetcherImpl is the implementation of the Fetcher interface
+// FetcherImpl is the concrete implementation of the Fetcher
 type FetcherImpl struct {
-	MaxFileSize int
+	httpClient *http.Client
 }
 
-// FetchImage downloads an image and returns a ReadSeeker
+// NewFetcher creates a new fetcher
+func NewFetcher() Fetcher {
+	c := &http.Client{
+		Timeout: 60 * time.Second,
+	}
+
+	return &FetcherImpl{c}
+}
+
+// FetchImage does what it says on the tin
 func (f *FetcherImpl) FetchImage(uri string) (io.ReadSeeker, error) {
-	resp, err := http.Get(uri)
+	resp, err := f.httpClient.Get(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +50,7 @@ func (f *FetcherImpl) FetchImage(uri string) (io.ReadSeeker, error) {
 	return bytes.NewReader(buf), nil
 }
 
-// ReaderToImage reads the contents of a ReadSeeker and returns a golang image
+// ReaderToImage convert a io Reader to an image
 func (f *FetcherImpl) ReaderToImage(r io.ReadSeeker) (image.Image, error) {
 	_, err := r.Seek(0, os.SEEK_SET)
 	if err != nil {

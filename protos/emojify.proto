@@ -1,0 +1,42 @@
+syntax = "proto3";
+package emojify;
+
+import "google/protobuf/wrappers.proto";
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+  }
+  ServingStatus status = 1;
+}
+
+message QueryStatus{
+  enum QueryStatus {
+    UNKNOWN = 0;
+    QUEUED = 1;
+    FINISHED = 2;
+    PROCESSING = 3;
+  }
+
+  QueryStatus status = 1;
+}
+
+message QueryItem {
+  string id = 1;
+  int32 queuePosition = 2;
+  int32 queueLength = 3;
+  QueryStatus status = 4;
+}
+
+service Emojify {
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc Create(google.protobuf.StringValue) returns (QueryItem) {}
+  rpc Query(google.protobuf.StringValue) returns (QueryItem) {}
+}
+
