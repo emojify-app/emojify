@@ -60,7 +60,7 @@ func (e *Emojify) Create(ctx context.Context, uri *wrappers.StringValue) (*emoji
 	}
 
 	// exists in either the cache or the queue, return
-	if ei != nil {
+	if ei != nil && ei.GetStatus().Status != emojify.QueryStatus_UNKNOWN {
 		e.logger.Log().Debug("Found item in cache or queue", "item", ei)
 
 		done(http.StatusOK, nil)
@@ -82,7 +82,9 @@ func (e *Emojify) Create(ctx context.Context, uri *wrappers.StringValue) (*emoji
 
 		queueDone(http.StatusInternalServerError, err)
 		done(http.StatusInternalServerError, err)
-		return nil, grpc.Errorf(codes.Internal, "error addding to queue: %s", err)
+		ei.Status = &emojify.QueryStatus{Status: emojify.QueryStatus_UNKNOWN}
+
+		return ei, grpc.Errorf(codes.Internal, "error addding to queue: %s", err)
 	}
 	queueDone(http.StatusOK, nil)
 
@@ -134,7 +136,8 @@ func (e *Emojify) checkQueueAndCache(id string) (*emojify.QueryItem, error) {
 			cDone(http.StatusNotFound, err)
 		} else {
 			cDone(http.StatusInternalServerError, err)
-			return nil, grpc.Errorf(codes.Internal, "cache error: %s", err)
+			ei.Status = &emojify.QueryStatus{Status: emojify.QueryStatus_UNKNOWN}
+			return ei, grpc.Errorf(codes.Internal, "cache error: %s", err)
 		}
 	}
 
@@ -152,7 +155,8 @@ func (e *Emojify) checkQueueAndCache(id string) (*emojify.QueryItem, error) {
 	pos, l, err := e.workerQueue.Position(id)
 	if err != nil {
 		qiDone(http.StatusInternalServerError, err)
-		return nil, err
+		ei.Status = &emojify.QueryStatus{Status: emojify.QueryStatus_UNKNOWN}
+		return ei, err
 	}
 
 	// if this is the currently processing items set the status
@@ -175,5 +179,6 @@ func (e *Emojify) checkQueueAndCache(id string) (*emojify.QueryItem, error) {
 	}
 
 	qiDone(http.StatusNotFound, nil)
-	return nil, nil
+	ei.Status = &emojify.QueryStatus{Status: emojify.QueryStatus_UNKNOWN}
+	return ei, nil
 }
