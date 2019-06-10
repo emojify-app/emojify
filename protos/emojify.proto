@@ -21,6 +21,7 @@ message QueryStatus{
     UNKNOWN = 0;
     QUEUED = 1;
     FINISHED = 2;
+    PROCESSING = 3;
   }
 
   QueryStatus status = 1;

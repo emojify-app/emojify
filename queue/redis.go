@@ -3,7 +3,6 @@ package queue
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -70,6 +69,7 @@ func (r *Redis) Pop() chan PopResponse {
 			k := r.client.ZPopMin(r.list, 1)
 			if err := k.Err(); err != nil {
 				r.logger.Error("Error reading from queue", "error", err)
+
 				time.Sleep(r.errorDelay)
 				continue
 			}
@@ -77,13 +77,15 @@ func (r *Redis) Pop() chan PopResponse {
 			res, err := k.Result()
 			if err != nil {
 				r.logger.Error("Error getting result from queue item", "error", err)
+
 				time.Sleep(r.errorDelay)
 				continue
 			}
 
 			// check that an item has been returned, if not sleep
 			if len(res) < 1 {
-				r.logger.Error("No items in queue item", "error", err)
+				r.logger.Trace("No items in queue item", "error", err)
+
 				time.Sleep(r.errorDelay)
 				continue
 			}
@@ -93,18 +95,19 @@ func (r *Redis) Pop() chan PopResponse {
 			i := r.client.Get(key.(string))
 			if err := i.Err(); err != nil {
 				r.logger.Error("Queue item not in database", "error", err)
+
 				time.Sleep(r.errorDelay)
 				continue
 			}
 
 			// delete the item from the db now it has been retrieved
-			log.Println("delete db", k)
 			r.client.Del(key.(string))
 
 			// unmarshal the item
 			data, err := i.Result()
 			if err != nil {
 				r.logger.Error("Deleting queue item from database", "error", err)
+
 				time.Sleep(r.errorDelay)
 				continue
 			}
@@ -113,12 +116,12 @@ func (r *Redis) Pop() chan PopResponse {
 			err = json.Unmarshal([]byte(data), item)
 			if err != nil {
 				r.logger.Error("Unable to marshal item from database", "error", err)
+
 				time.Sleep(r.errorDelay)
 				continue
 			}
 
 			r.logger.Debug("Returning item from queue", "item", item)
-
 			r.popChan <- PopResponse{Item: item}
 
 			// store the currently processing item in case the client
@@ -139,11 +142,11 @@ func (r *Redis) Position(key string) (position, length int, err error) {
 
 	if r.currentItem != nil {
 		r.logger.Debug("Current item", "item", r.currentItem.ID, "key", key)
-	}
 
-	// if the key is the current item id then return the item as we are processing
-	if r.currentItem != nil && key == r.currentItem.ID {
-		return 1, int(max.Val() + 1), nil
+		// if the key is the current item id then return the item as we are processing
+		if key == r.currentItem.ID {
+			return -1, int(max.Val() + 1), nil
+		}
 	}
 
 	// if the queue is empty do not lookup

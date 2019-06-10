@@ -30,7 +30,7 @@ func main() {
 	log.Println(resp.String())
 
 	// post an image to the server
-	postresp, err := emojifyClient.Create(context.Background(), &wrappers.StringValue{Value: "https://emojify.today/pictures/6.jpg"})
+	postresp, err := emojifyClient.Create(context.Background(), &wrappers.StringValue{Value: "https://emojify.today/pictures/1.jpg"})
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)

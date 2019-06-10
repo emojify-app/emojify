@@ -6,7 +6,6 @@ import (
 	"image"
 	"image/jpeg"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -28,22 +27,32 @@ type Emojify struct {
 	emojifier   emojify.Emojify
 	errorDelay  time.Duration
 	normalDelay time.Duration
+	currentItem *queue.Item
 }
 
 // New returns a new Emojify worker
 func New(q queue.Queue, c cache.CacheClient, l logging.Logger, f emojify.Fetcher, e emojify.Emojify, ed, nd time.Duration) *Emojify {
-	return &Emojify{q, c, l, f, e, ed, nd}
+	return &Emojify{
+		queue:       q,
+		cache:       c,
+		logger:      l,
+		fetcher:     f,
+		emojifier:   e,
+		errorDelay:  ed,
+		normalDelay: nd}
 }
 
 // Start processing items on the queue
 func (e *Emojify) Start() {
+	l := e.logger.Log().Named("worker")
+
 	for qi := range e.queue.Pop() {
 
-		e.logger.Log().Debug("Worker processing queue item", "item", qi)
+		l.Debug("Worker processing queue item", "item", qi)
 
 		done := e.logger.WorkerProcessQueueItem(qi.Item)
 		if qi.Error != nil {
-			log.Println("Error returned from queue", qi.Error)
+			l.Error("Error returned from queue", "error", qi.Error)
 			done(http.StatusInternalServerError, qi.Error)
 			continue
 		}
@@ -64,12 +73,11 @@ func (e *Emojify) Start() {
 
 		// if we have a cached item do not re-process
 		if ok {
-			e.logger.Log().Debug("Found cached item", "item", qi.Item)
+			l.Debug("Found cached item", "item", qi.Item)
 			done(http.StatusOK, nil)
 			continue
 		}
 
-		e.logger.Log().Debug("Fetch")
 		// fetch the image
 		f, img, err := e.fetchImage(qi.Item.URI)
 		if err != nil {
