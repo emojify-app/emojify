@@ -84,7 +84,7 @@ func TestStartWithCacheItemDoesNotFetch(t *testing.T) {
 	td.mockCache.On("Exists", mock.Anything, id, mock.Anything).Return(&wrappers.BoolValue{Value: true}, nil)
 
 	td.popChan <- td.qi
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	td.mockCache.AssertCalled(t, "Exists", mock.Anything, id, mock.Anything)
 	td.mockFetcher.AssertNotCalled(t, "FetchImage", mock.Anything)
@@ -98,7 +98,7 @@ func TestStartWithCacheErrorDoesNotFetch(t *testing.T) {
 	td.mockCache.On("Exists", mock.Anything, id, mock.Anything).Return(nil, fmt.Errorf("abc"))
 
 	td.popChan <- td.qi
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	td.mockCache.AssertCalled(t, "Exists", mock.Anything, id, mock.Anything)
 	td.mockFetcher.AssertNotCalled(t, "FetchImage", mock.Anything)
@@ -111,7 +111,7 @@ func TestStartWithFetchErrorDoesNotFindFaces(t *testing.T) {
 	td.mockFetcher.On("FetchImage", mock.Anything).Return(nil, fmt.Errorf("abc"))
 
 	td.popChan <- td.qi
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	td.mockEmojify.AssertNotCalled(t, "GetFaces", mock.Anything)
 }
@@ -124,7 +124,7 @@ func TestStartWithInvalidImageDoesNotFindFaces(t *testing.T) {
 	td.mockFetcher.On("ReaderToImage", mock.Anything).Return(nil, fmt.Errorf("abc"))
 
 	td.popChan <- td.qi
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	td.mockEmojify.AssertNotCalled(t, "GetFaces", mock.Anything)
 }
@@ -137,7 +137,7 @@ func TestStartWithInvalidEmojimiseDoesNotSetCache(t *testing.T) {
 	td.mockEmojify.On("Emojimise", td.mockImage, td.mockFaces).Return(nil, fmt.Errorf("boom"))
 
 	td.popChan <- td.qi
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	td.mockEmojify.AssertCalled(t, "Emojimise", td.mockImage, td.mockFaces)
 	td.mockCache.AssertNotCalled(t, "Put", mock.Anything)
@@ -148,7 +148,7 @@ func TestStartProcessesItem(t *testing.T) {
 	id := &wrappers.StringValue{Value: "abc123"}
 
 	td.popChan <- td.qi
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	td.mockCache.AssertCalled(t, "Exists", mock.Anything, id, mock.Anything)
 	td.mockFetcher.AssertCalled(t, "FetchImage", td.qi.Item.URI)
