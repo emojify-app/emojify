@@ -4,6 +4,7 @@ build_protos:
 goconvey:
 	goconvey -excludedDirs protos
 
+# Spin up environment
 run_functional:
 	REDIS_ADDRESS=localhost:6379 REDIS_PASSWORD=password FACEBOX_ADDRESS=http://localhost:9070 CACHE_ADDRESS=localhost:9080 LOG_LEVEL=trace go run main.go
 
