@@ -15,6 +15,7 @@ type Redis struct {
 	list        string
 	expiration  time.Duration
 	popChan     chan PopResponse
+	doneChan    chan PopResponse
 	currentItem *Item
 	logger      hclog.Logger
 	errorDelay  time.Duration
@@ -34,7 +35,9 @@ func New(addr, password string, db int, l hclog.Logger) (*Redis, error) {
 		expiration: 30 * time.Minute,
 		logger:     l,
 		errorDelay: 5 * time.Second,
-		popChan:    make(chan PopResponse)}, nil
+		popChan:    make(chan PopResponse),
+		doneChan:   make(chan PopResponse),
+	}, nil
 }
 
 // Push an item onto the queue
@@ -121,14 +124,30 @@ func (r *Redis) Pop() chan PopResponse {
 				continue
 			}
 
-			r.logger.Debug("Returning item from queue", "item", item)
-			r.popChan <- PopResponse{Item: item}
+			r.logger.Debug("Send item from queue to worker", "item", item)
 
 			// store the currently processing item in case the client
 			// queries as it has now been removed from the queue
-			// there is a race condition which stops this working correctly
-			// TODO Find a better way of tracking processing items
 			r.currentItem = item
+
+			// block until a worker is able to accept the request
+			r.popChan <- PopResponse{Item: item, Done: r.doneChan}
+
+			r.logger.Debug("Waiting for worker to complete", "item", item)
+
+			// block until the worker has processed the item
+			select {
+			case pr := <-r.doneChan:
+				r.currentItem = nil
+
+				if pr.Error != nil {
+					// TODO handle requeueing failed items
+					r.logger.Error("Item processing failed", "item", pr.Item, "error", pr.Error)
+				} else {
+					r.logger.Debug("Item processing complete queue", "item", pr.Item)
+				}
+			}
+
 		}
 	}()
 

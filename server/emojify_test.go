@@ -64,7 +64,7 @@ func TestCreateAddsItemToTheQueueIfNotPresent(t *testing.T) {
 	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_QUEUED}, i.GetStatus())
 }
 
-func TestCreateReturnsErrorWhenCacheError(t *testing.T) {
+func TestCreateContinuesWhenCacheError(t *testing.T) {
 	e := setup(t, 0, 0)
 	id := &wrappers.StringValue{Value: url}
 	mockCache.ExpectedCalls = make([]*mock.Call, 0)
@@ -72,8 +72,8 @@ func TestCreateReturnsErrorWhenCacheError(t *testing.T) {
 
 	_, err := e.Create(context.Background(), id)
 
-	assert.Error(t, err)
-	assert.Equal(t, codes.Internal, grpc.Code(err))
+	assert.Nil(t, err)
+	//assert.Equal(t, codes.Internal, grpc.Code(err))
 }
 
 func TestCreateDoesNotAddItemToTheQueueIfInCache(t *testing.T) {
@@ -140,7 +140,7 @@ func TestQueryReturnsItemIfInCache(t *testing.T) {
 	assert.Equal(t, &emojify.QueryStatus{Status: emojify.QueryStatus_FINISHED}, i.GetStatus())
 }
 
-func TestQueryReturnsErrorIfQueueError(t *testing.T) {
+func TestQueryRequeuesIfQueueError(t *testing.T) {
 	e := setup(t, 4, 4)
 	id := &wrappers.StringValue{Value: base64URL}
 	mockQueue.ExpectedCalls = make([]*mock.Call, 0)
@@ -148,6 +148,6 @@ func TestQueryReturnsErrorIfQueueError(t *testing.T) {
 
 	_, err := e.Query(context.Background(), id)
 
-	assert.Error(t, err)
-	assert.Equal(t, codes.Internal, grpc.Code(err))
+	assert.Nil(t, err)
+	//assert.Equal(t, codes.Internal, grpc.Code(err))
 }

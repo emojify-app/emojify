@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/emojify-app/emojify/protos/emojify"
@@ -11,15 +12,16 @@ import (
 	"google.golang.org/grpc"
 )
 
-func main() {
+var emojifyClient emojify.EmojifyClient
 
+func main() {
 	log.Println("Connecting to emojify", "address", "localhost:9090")
 	emojifyConn, err := grpc.Dial("localhost:9090", grpc.WithInsecure())
 	if err != nil {
 		log.Println("Unable to create gRPC client", err)
 		os.Exit(1)
 	}
-	emojifyClient := emojify.NewEmojifyClient(emojifyConn)
+	emojifyClient = emojify.NewEmojifyClient(emojifyConn)
 
 	resp, err := emojifyClient.Check(context.Background(), &emojify.HealthCheckRequest{})
 	if err != nil {
@@ -28,9 +30,18 @@ func main() {
 	}
 
 	log.Println(resp.String())
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
 
+	go doWork("https://emojify.today/pictures/6.jpg", wg)
+	go doWork("https://emojify.today/pictures/7.jpg", wg)
+
+	wg.Wait()
+}
+
+func doWork(url string, wg *sync.WaitGroup) {
 	// post an image to the server
-	postresp, err := emojifyClient.Create(context.Background(), &wrappers.StringValue{Value: "https://emojify.today/pictures/1.jpg"})
+	postresp, err := emojifyClient.Create(context.Background(), &wrappers.StringValue{Value: url})
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
@@ -56,4 +67,6 @@ func main() {
 
 	// fetch the image
 	log.Println("Complete")
+
+	wg.Done()
 }

@@ -22,6 +22,7 @@ type Item struct {
 type PopResponse struct {
 	Item  *Item
 	Error error
+	Done  chan PopResponse
 }
 
 // Queue defines the interface methods for a FIFO queue

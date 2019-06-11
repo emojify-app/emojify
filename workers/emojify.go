@@ -51,23 +51,14 @@ func (e *Emojify) Start() {
 		l.Debug("Worker processing queue item", "item", qi)
 
 		done := e.logger.WorkerProcessQueueItem(qi.Item)
-		if qi.Error != nil {
-			l.Error("Error returned from queue", "error", qi.Error)
-			done(http.StatusInternalServerError, qi.Error)
-			continue
-		}
-
-		// do we have an item to process?
-		if qi.Item == nil {
-			e.logger.WorkerQueueStatus(0)
-			done(http.StatusNotFound, nil)
-			continue
-		}
-
 		// check the cache
 		ok, err := e.checkCache(qi.Item.ID)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
+
+			// set the error and signal complete
+			qi.Error = err
+			qi.Done <- qi
 			continue
 		}
 
@@ -75,6 +66,9 @@ func (e *Emojify) Start() {
 		if ok {
 			l.Debug("Found cached item", "item", qi.Item)
 			done(http.StatusOK, nil)
+
+			// signal complete
+			qi.Done <- qi
 			continue
 		}
 
@@ -82,6 +76,10 @@ func (e *Emojify) Start() {
 		f, img, err := e.fetchImage(qi.Item.URI)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
+
+			// set the error and signal complete
+			qi.Error = err
+			qi.Done <- qi
 			continue
 		}
 
@@ -89,6 +87,10 @@ func (e *Emojify) Start() {
 		faces, err := e.findFaces(qi.Item.URI, f)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
+
+			// set the error and signal complete
+			qi.Error = err
+			qi.Done <- qi
 			continue
 		}
 
@@ -96,6 +98,10 @@ func (e *Emojify) Start() {
 		data, err := e.processImage(qi.Item.URI, faces, img)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
+
+			// set the error and signal complete
+			qi.Error = err
+			qi.Done <- qi
 			continue
 		}
 
@@ -103,10 +109,17 @@ func (e *Emojify) Start() {
 		err = e.saveCache(qi.Item.URI, qi.Item.ID, data)
 		if err != nil {
 			done(http.StatusInternalServerError, err)
+
+			// set the error and signal complete
+			qi.Error = err
+			qi.Done <- qi
 			continue
 		}
 
 		done(http.StatusOK, nil)
+
+		// signal complete
+		qi.Done <- qi
 	}
 }
 
